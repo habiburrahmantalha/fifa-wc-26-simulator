@@ -8,7 +8,7 @@ export function TournamentHeader() {
   const phase = tournament?.groupStageComplete ? "Knockout Stage" : "Group Stage";
 
   return (
-    <header className="border-b border-emerald-900/40 bg-zinc-950/80 backdrop-blur sticky top-0 z-10">
+    <header className="border-b border-emerald-900/40">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">

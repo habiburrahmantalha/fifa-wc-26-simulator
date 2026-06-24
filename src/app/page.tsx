@@ -50,26 +50,30 @@ export default function SimulatorPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <TournamentHeader />
+      <div className="sticky top-0 z-20 border-b border-zinc-800 bg-zinc-950/95 shadow-lg shadow-black/20 backdrop-blur-md">
+        <TournamentHeader />
+        <div className="mx-auto max-w-7xl min-w-0 px-3 sm:px-4">
+          <nav className="flex gap-1.5 overflow-x-auto pb-2 pt-1 sm:gap-2">
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
+                  tab === t.id
+                    ? "bg-emerald-700 text-white"
+                    : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+
       {champion && <ChampionBanner champion={champion} />}
 
-      <div className="mx-auto max-w-7xl px-4 py-6">
-        <nav className="mb-6 flex gap-2 border-b border-zinc-800 pb-2">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                tab === t.id
-                  ? "bg-emerald-700 text-white"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
-
+      <div className="mx-auto max-w-7xl min-w-0 px-3 py-6 sm:px-4">
         {tab === "groups" && (
           <GroupStandings
             groups={tournament.groups}
