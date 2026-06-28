@@ -2,6 +2,7 @@
 
 import type { ResolvedGame } from "@/lib/types";
 import { MatchCard } from "./MatchCard";
+import { TopScorers } from "./TopScorers";
 
 interface KnockoutBracketProps {
   games: ResolvedGame[];
@@ -20,6 +21,7 @@ export function KnockoutBracket({ games }: KnockoutBracketProps) {
 
   return (
     <div className="space-y-8">
+      <TopScorers />
       {ROUNDS.map((round) => {
         const roundGames = knockout
           .filter((g) => round.types.includes(g.type))

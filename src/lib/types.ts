@@ -66,6 +66,8 @@ export interface Game {
   localDate: string;
   homeTeamName?: string;
   awayTeamName?: string;
+  homeScorers?: string | null;
+  awayScorers?: string | null;
 }
 
 export interface SimulationPick {
@@ -113,6 +115,8 @@ export interface RawApiGame {
   away_team_label?: string;
   home_team_name_en?: string;
   away_team_name_en?: string;
+  home_scorers?: string | null;
+  away_scorers?: string | null;
 }
 
 export interface RawApiTeam {

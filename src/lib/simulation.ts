@@ -37,6 +37,8 @@ function normalizeGame(raw: RawApiGame): Game {
     localDate: raw.local_date,
     homeTeamName: raw.home_team_name_en,
     awayTeamName: raw.away_team_name_en,
+    homeScorers: raw.home_scorers ?? null,
+    awayScorers: raw.away_scorers ?? null,
   };
 }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { getTeamGroupSummary } from "@/lib/group-info";
+import { parseScorers } from "@/lib/scorers";
 import type { PickOutcome, ResolvedGame, Team } from "@/lib/types";
 import { useSimulation } from "@/hooks/useSimulation";
 
@@ -13,11 +15,13 @@ function TeamBadge({
   label,
   isWinner,
   align = "start",
+  groupSummary,
 }: {
   team: Team | null;
   label?: string;
   isWinner?: boolean;
   align?: "start" | "end" | "center";
+  groupSummary?: string | null;
 }) {
   const name = team?.nameEn ?? label ?? "TBD";
   const alignClass =
@@ -28,20 +32,52 @@ function TeamBadge({
         : "justify-start text-left";
 
   return (
-    <div
-      className={`flex min-w-0 items-center gap-1.5 sm:gap-2 ${alignClass} ${
-        isWinner ? "font-semibold text-emerald-300" : "text-zinc-200"
+    <div className={`min-w-0 ${align === "end" ? "text-right" : ""}`}>
+      <div
+        className={`flex min-w-0 items-center gap-1.5 sm:gap-2 ${alignClass} ${
+          isWinner ? "font-semibold text-emerald-300" : "text-zinc-200"
+        }`}
+      >
+        {team?.flag && (
+          <img
+            src={team.flag}
+            alt=""
+            className="h-4 w-6 shrink-0 rounded object-cover sm:h-5 sm:w-7"
+          />
+        )}
+        <span className="truncate text-xs leading-tight sm:text-sm">{name}</span>
+      </div>
+      {groupSummary && (
+        <p
+          className={`mt-0.5 truncate text-[10px] leading-tight text-zinc-500 sm:text-[11px] ${
+            align === "end" ? "text-right" : "text-left"
+          }`}
+        >
+          {groupSummary}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ScorersList({
+  scorers,
+  align,
+}: {
+  scorers: string[];
+  align: "left" | "right";
+}) {
+  if (scorers.length === 0) return null;
+  return (
+    <ul
+      className={`mt-1 space-y-0.5 text-[10px] text-zinc-500 sm:text-[11px] ${
+        align === "right" ? "text-right" : "text-left"
       }`}
     >
-      {team?.flag && (
-        <img
-          src={team.flag}
-          alt=""
-          className="h-4 w-6 shrink-0 rounded object-cover sm:h-5 sm:w-7"
-        />
-      )}
-      <span className="truncate text-xs leading-tight sm:text-sm">{name}</span>
-    </div>
+      {scorers.map((s) => (
+        <li key={s}>{s}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -55,6 +91,33 @@ export function MatchCard({ game, compact }: MatchCardProps) {
   const awayTeam = game.resolvedAwayId
     ? tournament.teams[game.resolvedAwayId]
     : null;
+
+  const isKnockout = game.type !== "group";
+  const homeGroupSummary =
+    isKnockout && game.resolvedHomeId
+      ? getTeamGroupSummary(
+          game.resolvedHomeId,
+          tournament.groups,
+          tournament.qualification,
+        )?.label
+      : null;
+  const awayGroupSummary =
+    isKnockout && game.resolvedAwayId
+      ? getTeamGroupSummary(
+          game.resolvedAwayId,
+          tournament.groups,
+          tournament.qualification,
+        )?.label
+      : null;
+
+  const homeScorers =
+    game.finished && !game.isSimulated
+      ? parseScorers(game.homeScorers).map((s) => s.raw)
+      : [];
+  const awayScorers =
+    game.finished && !game.isSimulated
+      ? parseScorers(game.awayScorers).map((s) => s.raw)
+      : [];
 
   const pick = state.picks[game.id]?.outcome;
   const hasScore =
@@ -117,11 +180,12 @@ export function MatchCard({ game, compact }: MatchCardProps) {
 
       {/* Mobile: stacked teams */}
       <div className="space-y-2 sm:hidden">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-start justify-between gap-2">
           <TeamBadge
             team={homeTeam}
             label={game.homeTeamLabel}
             isWinner={homeWin || pick === "home"}
+            groupSummary={homeGroupSummary}
           />
           {hasScore && (
             <span
@@ -133,14 +197,16 @@ export function MatchCard({ game, compact }: MatchCardProps) {
             </span>
           )}
         </div>
+        <ScorersList scorers={homeScorers} align="left" />
         {!hasScore && (
           <div className="text-center text-xs text-zinc-500">vs</div>
         )}
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-start justify-between gap-2">
           <TeamBadge
             team={awayTeam}
             label={game.awayTeamLabel}
             isWinner={awayWin || pick === "away"}
+            groupSummary={awayGroupSummary}
           />
           {hasScore && (
             <span
@@ -152,25 +218,34 @@ export function MatchCard({ game, compact }: MatchCardProps) {
             </span>
           )}
         </div>
+        <ScorersList scorers={awayScorers} align="left" />
         {game.isSimulated && (
           <p className="text-center text-[10px] text-amber-500/80">simulated</p>
         )}
       </div>
 
       {/* Desktop: side-by-side */}
-      <div className="hidden grid-cols-[1fr_auto_1fr] items-center gap-2 sm:grid sm:gap-3">
-        <TeamBadge
-          team={homeTeam}
-          label={game.homeTeamLabel}
-          isWinner={homeWin || pick === "home"}
-        />
+      <div className="hidden sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-start sm:gap-3">
+        <div>
+          <TeamBadge
+            team={homeTeam}
+            label={game.homeTeamLabel}
+            isWinner={homeWin || pick === "home"}
+            groupSummary={homeGroupSummary}
+          />
+          <ScorersList scorers={homeScorers} align="left" />
+        </div>
         {scoreBlock}
-        <TeamBadge
-          team={awayTeam}
-          label={game.awayTeamLabel}
-          isWinner={awayWin || pick === "away"}
-          align="end"
-        />
+        <div>
+          <TeamBadge
+            team={awayTeam}
+            label={game.awayTeamLabel}
+            isWinner={awayWin || pick === "away"}
+            align="end"
+            groupSummary={awayGroupSummary}
+          />
+          <ScorersList scorers={awayScorers} align="right" />
+        </div>
       </div>
 
       {canSimulate && game.type === "group" && (

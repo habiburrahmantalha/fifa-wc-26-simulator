@@ -2,6 +2,7 @@
 
 import type { ResolvedGame } from "@/lib/types";
 import { MatchCard } from "./MatchCard";
+import { TopScorers } from "./TopScorers";
 
 interface FixturesListProps {
   games: ResolvedGame[];
@@ -36,10 +37,13 @@ export function FixturesList({ games }: FixturesListProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 min-w-0 sm:grid-cols-2 lg:grid-cols-3">
-      {playable.map((g) => (
-        <MatchCard key={g.id} game={g} />
-      ))}
-    </div>
+    <>
+      <TopScorers />
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {playable.map((g) => (
+          <MatchCard key={g.id} game={g} />
+        ))}
+      </div>
+    </>
   );
 }
