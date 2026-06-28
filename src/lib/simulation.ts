@@ -74,20 +74,18 @@ function applyPicksToGames(
   });
 }
 
-function resolveTeamSlot(
-  teamId: string | null,
-  label: string | undefined,
-  qual: QualificationResult | null,
-  matchId: string,
+function isBracketSlotLabel(label?: string): boolean {
+  if (!label) return false;
+  return /^(Winner Group|Runner-up Group|3rd Group|Winner Match|Loser Match)/.test(
+    label,
+  );
+}
+
+function resolveRef(
+  ref: string,
   winnerByMatchId: Map<string, string>,
   gamesById: Map<string, ResolvedGame>,
 ): string | null {
-  if (teamId) return teamId;
-  if (!label) return null;
-
-  const ref = resolveSlotLabel(label, qual, matchId);
-  if (!ref) return null;
-
   const winMatch = ref.match(/^__match_(\d+)__$/);
   if (winMatch) return winnerByMatchId.get(winMatch[1]) ?? null;
 
@@ -102,6 +100,33 @@ function resolveTeamSlot(
   }
 
   return ref;
+}
+
+function resolveTeamSlot(
+  teamId: string | null,
+  label: string | undefined,
+  qual: QualificationResult | null,
+  matchId: string,
+  winnerByMatchId: Map<string, string>,
+  gamesById: Map<string, ResolvedGame>,
+  finished: boolean,
+): string | null {
+  if (label && isBracketSlotLabel(label)) {
+    const ref = resolveSlotLabel(label, qual, matchId);
+    if (ref) {
+      const resolved = resolveRef(ref, winnerByMatchId, gamesById);
+      if (resolved) return resolved;
+    }
+    // Ignore stale/wrong placeholder IDs from the API for unresolved slots
+    if (!finished) return null;
+  }
+
+  if (teamId) return teamId;
+  if (!label) return null;
+
+  const ref = resolveSlotLabel(label, qual, matchId);
+  if (!ref) return null;
+  return resolveRef(ref, winnerByMatchId, gamesById);
 }
 
 function resolveAllGames(
@@ -138,6 +163,7 @@ function resolveAllGames(
       game.id,
       winnerByMatchId,
       gamesById,
+      game.finished,
     );
     const awayId = resolveTeamSlot(
       game.awayTeamId,
@@ -146,6 +172,7 @@ function resolveAllGames(
       game.id,
       winnerByMatchId,
       gamesById,
+      game.finished,
     );
 
     const winnerId = getMatchWinner(
