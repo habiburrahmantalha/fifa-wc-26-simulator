@@ -103,10 +103,17 @@ export function getMatchWinner(
   homeScore: number | null,
   awayScore: number | null,
   pick?: "home" | "draw" | "away",
+  knockout = false,
 ): string | null {
   if (homeScore != null && awayScore != null) {
     if (homeScore > awayScore) return homeId;
     if (awayScore > homeScore) return awayId;
+    // Knockout draws require extra time / penalties — user must pick the winner
+    if (knockout) {
+      if (pick === "home") return homeId;
+      if (pick === "away") return awayId;
+      return null;
+    }
     if (pick === "home") return homeId;
     if (pick === "away") return awayId;
     return null;
@@ -114,6 +121,22 @@ export function getMatchWinner(
   if (pick === "home") return homeId;
   if (pick === "away") return awayId;
   return null;
+}
+
+export function isKnockoutTie(
+  homeScore: number | null,
+  awayScore: number | null,
+): boolean {
+  return homeScore != null && awayScore != null && homeScore === awayScore;
+}
+
+export function needsKnockoutTiebreaker(
+  type: string,
+  homeScore: number | null,
+  awayScore: number | null,
+  pick?: "home" | "draw" | "away",
+): boolean {
+  return type !== "group" && isKnockoutTie(homeScore, awayScore) && !pick;
 }
 
 export { getThirdPlaceAssignment };

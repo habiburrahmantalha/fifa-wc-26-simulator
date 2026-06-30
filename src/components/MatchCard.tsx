@@ -1,6 +1,7 @@
 "use client";
 
 import { getTeamGroupSummary } from "@/lib/group-info";
+import { needsKnockoutTiebreaker } from "@/lib/bracket";
 import { parseScorers } from "@/lib/scorers";
 import type { PickOutcome, ResolvedGame, Team } from "@/lib/types";
 import { useSimulation } from "@/hooks/useSimulation";
@@ -124,9 +125,29 @@ export function MatchCard({ game, compact }: MatchCardProps) {
     (game.finished || pick != null) &&
     game.effectiveHomeScore != null &&
     game.effectiveAwayScore != null;
-  const isPlayed = game.finished && !game.isSimulated;
-  const canSimulate =
+  const tiebreakerNeeded = needsKnockoutTiebreaker(
+    game.type,
+    game.effectiveHomeScore,
+    game.effectiveAwayScore,
+    pick,
+  );
+  const knockoutResolved =
+    isKnockout &&
+    hasScore &&
+    (game.effectiveHomeScore !== game.effectiveAwayScore ||
+      pick === "home" ||
+      pick === "away");
+  const isPlayed =
+    game.finished &&
+    !game.isSimulated &&
+    !tiebreakerNeeded &&
+    (!isKnockout || knockoutResolved);
+  const canSimulateGroup =
     !isPlayed && Boolean(game.resolvedHomeId && game.resolvedAwayId);
+  const canPickKnockoutWinner =
+    isKnockout &&
+    Boolean(game.resolvedHomeId && game.resolvedAwayId) &&
+    (!hasScore || game.isSimulated || tiebreakerNeeded || !game.finished);
 
   const handlePick = (outcome: PickOutcome) => {
     if (pick === outcome) {
@@ -137,27 +158,42 @@ export function MatchCard({ game, compact }: MatchCardProps) {
   };
 
   const homeWin =
-    hasScore && game.effectiveHomeScore! > game.effectiveAwayScore!;
+    hasScore &&
+    (game.effectiveHomeScore! > game.effectiveAwayScore! || pick === "home");
   const awayWin =
-    hasScore && game.effectiveAwayScore! > game.effectiveHomeScore!;
+    hasScore &&
+    (game.effectiveAwayScore! > game.effectiveHomeScore! || pick === "away");
   const isDraw =
-    hasScore && game.effectiveHomeScore === game.effectiveAwayScore;
+    hasScore &&
+    game.effectiveHomeScore === game.effectiveAwayScore &&
+    !pick;
+
+  const scoreSuffix =
+    isKnockout && isDraw && hasScore ? (
+      <p className="text-[10px] text-amber-400/90">a.e.t.</p>
+    ) : null;
 
   const scoreBlock = (
     <div className="shrink-0 px-1 text-center">
       {hasScore ? (
-        <span
-          className={`font-mono text-base sm:text-lg ${
-            game.isSimulated ? "text-amber-400" : "text-white"
-          }`}
-        >
-          {game.effectiveHomeScore}–{game.effectiveAwayScore}
-        </span>
+        <>
+          <span
+            className={`font-mono text-base sm:text-lg ${
+              game.isSimulated ? "text-amber-400" : "text-white"
+            }`}
+          >
+            {game.effectiveHomeScore}–{game.effectiveAwayScore}
+          </span>
+          {scoreSuffix}
+        </>
       ) : (
         <span className="text-xs text-zinc-500 sm:text-sm">vs</span>
       )}
       {game.isSimulated && (
         <p className="text-[10px] text-amber-500/80">simulated</p>
+      )}
+      {pick && isKnockout && game.effectiveHomeScore === game.effectiveAwayScore && (
+        <p className="text-[10px] text-emerald-400">pens</p>
       )}
     </div>
   );
@@ -175,6 +211,12 @@ export function MatchCard({ game, compact }: MatchCardProps) {
             {game.matchday}
           </span>
           <span className="text-[11px] sm:text-xs">{game.localDate}</span>
+        </div>
+      )}
+
+      {tiebreakerNeeded && (
+        <div className="mb-3 rounded-md border border-amber-700/50 bg-amber-950/40 px-3 py-2 text-center text-xs text-amber-200">
+          Level after extra time — pick the penalty shootout winner to advance
         </div>
       )}
 
@@ -248,7 +290,7 @@ export function MatchCard({ game, compact }: MatchCardProps) {
         </div>
       </div>
 
-      {canSimulate && game.type === "group" && (
+      {canSimulateGroup && game.type === "group" && (
         <div className="mt-3 grid grid-cols-3 gap-1.5 sm:flex sm:gap-2">
           {(["home", "draw", "away"] as PickOutcome[]).map((o) => (
             <button
@@ -266,7 +308,7 @@ export function MatchCard({ game, compact }: MatchCardProps) {
         </div>
       )}
 
-      {canSimulate && game.type !== "group" && (
+      {canPickKnockoutWinner && (
         <div className="mt-3 flex flex-col gap-1.5 sm:flex-row sm:gap-2">
           <button
             onClick={() => handlePick("home")}
@@ -279,10 +321,12 @@ export function MatchCard({ game, compact }: MatchCardProps) {
           >
             <span className="line-clamp-2 sm:line-clamp-none">
               <span className="sm:hidden">
-                {homeTeam?.nameEn?.split(" ").slice(-1)[0] ?? "Home"} wins
+                {homeTeam?.nameEn?.split(" ").slice(-1)[0] ?? "Home"}{" "}
+                {tiebreakerNeeded ? "on pens" : "wins"}
               </span>
               <span className="hidden sm:inline">
-                {homeTeam?.nameEn ?? "Home"} wins
+                {homeTeam?.nameEn ?? "Home"}{" "}
+                {tiebreakerNeeded ? "wins on pens" : "wins"}
               </span>
             </span>
           </button>
@@ -297,20 +341,16 @@ export function MatchCard({ game, compact }: MatchCardProps) {
           >
             <span className="line-clamp-2 sm:line-clamp-none">
               <span className="sm:hidden">
-                {awayTeam?.nameEn?.split(" ").slice(-1)[0] ?? "Away"} wins
+                {awayTeam?.nameEn?.split(" ").slice(-1)[0] ?? "Away"}{" "}
+                {tiebreakerNeeded ? "on pens" : "wins"}
               </span>
               <span className="hidden sm:inline">
-                {awayTeam?.nameEn ?? "Away"} wins
+                {awayTeam?.nameEn ?? "Away"}{" "}
+                {tiebreakerNeeded ? "wins on pens" : "wins"}
               </span>
             </span>
           </button>
         </div>
-      )}
-
-      {isDraw && game.type !== "group" && !pick && (
-        <p className="mt-2 text-center text-xs text-zinc-500">
-          Draw — pick a winner to advance
-        </p>
       )}
     </div>
   );

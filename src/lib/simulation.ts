@@ -183,6 +183,7 @@ function resolveAllGames(
       game.homeScore,
       game.awayScore,
       pick,
+      game.type !== "group",
     );
 
     const full: ResolvedGame = {
