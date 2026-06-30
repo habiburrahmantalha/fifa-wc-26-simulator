@@ -97,6 +97,17 @@ export function resolveSlotLabel(
   return null;
 }
 
+export function hasPenaltyResult(
+  homePenaltyScore: number | null | undefined,
+  awayPenaltyScore: number | null | undefined,
+): boolean {
+  return (
+    homePenaltyScore != null &&
+    awayPenaltyScore != null &&
+    homePenaltyScore !== awayPenaltyScore
+  );
+}
+
 export function getMatchWinner(
   homeId: string | null,
   awayId: string | null,
@@ -104,11 +115,18 @@ export function getMatchWinner(
   awayScore: number | null,
   pick?: "home" | "draw" | "away",
   knockout = false,
+  homePenaltyScore?: number | null,
+  awayPenaltyScore?: number | null,
 ): string | null {
   if (homeScore != null && awayScore != null) {
     if (homeScore > awayScore) return homeId;
     if (awayScore > homeScore) return awayId;
-    // Knockout draws require extra time / penalties — user must pick the winner
+
+    if (hasPenaltyResult(homePenaltyScore, awayPenaltyScore)) {
+      if (homePenaltyScore! > awayPenaltyScore!) return homeId;
+      return awayId;
+    }
+
     if (knockout) {
       if (pick === "home") return homeId;
       if (pick === "away") return awayId;
@@ -135,8 +153,13 @@ export function needsKnockoutTiebreaker(
   homeScore: number | null,
   awayScore: number | null,
   pick?: "home" | "draw" | "away",
+  homePenaltyScore?: number | null,
+  awayPenaltyScore?: number | null,
 ): boolean {
-  return type !== "group" && isKnockoutTie(homeScore, awayScore) && !pick;
+  if (type === "group") return false;
+  if (!isKnockoutTie(homeScore, awayScore)) return false;
+  if (hasPenaltyResult(homePenaltyScore, awayPenaltyScore)) return false;
+  return !pick;
 }
 
 export { getThirdPlaceAssignment };

@@ -39,6 +39,8 @@ function normalizeGame(raw: RawApiGame): Game {
     awayTeamName: raw.away_team_name_en,
     homeScorers: raw.home_scorers ?? null,
     awayScorers: raw.away_scorers ?? null,
+    homePenaltyScore: parseScore(raw.home_penalty_score),
+    awayPenaltyScore: parseScore(raw.away_penalty_score),
   };
 }
 
@@ -184,6 +186,8 @@ function resolveAllGames(
       game.awayScore,
       pick,
       game.type !== "group",
+      game.homePenaltyScore,
+      game.awayPenaltyScore,
     );
 
     const full: ResolvedGame = {

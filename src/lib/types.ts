@@ -68,6 +68,8 @@ export interface Game {
   awayTeamName?: string;
   homeScorers?: string | null;
   awayScorers?: string | null;
+  homePenaltyScore?: number | null;
+  awayPenaltyScore?: number | null;
 }
 
 export interface SimulationPick {
@@ -117,6 +119,8 @@ export interface RawApiGame {
   away_team_name_en?: string;
   home_scorers?: string | null;
   away_scorers?: string | null;
+  home_penalty_score?: string | null;
+  away_penalty_score?: string | null;
 }
 
 export interface RawApiTeam {

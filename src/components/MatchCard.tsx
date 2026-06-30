@@ -1,7 +1,7 @@
 "use client";
 
 import { getTeamGroupSummary } from "@/lib/group-info";
-import { needsKnockoutTiebreaker } from "@/lib/bracket";
+import { hasPenaltyResult, needsKnockoutTiebreaker } from "@/lib/bracket";
 import { parseScorers } from "@/lib/scorers";
 import type { PickOutcome, ResolvedGame, Team } from "@/lib/types";
 import { useSimulation } from "@/hooks/useSimulation";
@@ -125,18 +125,25 @@ export function MatchCard({ game, compact }: MatchCardProps) {
     (game.finished || pick != null) &&
     game.effectiveHomeScore != null &&
     game.effectiveAwayScore != null;
+  const penResult = hasPenaltyResult(
+    game.homePenaltyScore,
+    game.awayPenaltyScore,
+  );
   const tiebreakerNeeded = needsKnockoutTiebreaker(
     game.type,
     game.effectiveHomeScore,
     game.effectiveAwayScore,
     pick,
+    game.homePenaltyScore,
+    game.awayPenaltyScore,
   );
   const knockoutResolved =
     isKnockout &&
     hasScore &&
     (game.effectiveHomeScore !== game.effectiveAwayScore ||
       pick === "home" ||
-      pick === "away");
+      pick === "away" ||
+      penResult);
   const isPlayed =
     game.finished &&
     !game.isSimulated &&
@@ -159,18 +166,32 @@ export function MatchCard({ game, compact }: MatchCardProps) {
 
   const homeWin =
     hasScore &&
-    (game.effectiveHomeScore! > game.effectiveAwayScore! || pick === "home");
+    (game.effectiveHomeScore! > game.effectiveAwayScore! ||
+      pick === "home" ||
+      (penResult && game.homePenaltyScore! > game.awayPenaltyScore!));
   const awayWin =
     hasScore &&
-    (game.effectiveAwayScore! > game.effectiveHomeScore! || pick === "away");
+    (game.effectiveAwayScore! > game.effectiveHomeScore! ||
+      pick === "away" ||
+      (penResult && game.awayPenaltyScore! > game.homePenaltyScore!));
   const isDraw =
     hasScore &&
     game.effectiveHomeScore === game.effectiveAwayScore &&
-    !pick;
+    !pick &&
+    !penResult;
 
   const scoreSuffix =
     isKnockout && isDraw && hasScore ? (
       <p className="text-[10px] text-amber-400/90">a.e.t.</p>
+    ) : null;
+
+  const penaltyScoreLine =
+    isKnockout && penResult ? (
+      <p className="text-[10px] font-medium text-emerald-400">
+        {game.homePenaltyScore}–{game.awayPenaltyScore} pens
+      </p>
+    ) : pick && isKnockout && game.effectiveHomeScore === game.effectiveAwayScore ? (
+      <p className="text-[10px] text-emerald-400">pens</p>
     ) : null;
 
   const scoreBlock = (
@@ -185,15 +206,13 @@ export function MatchCard({ game, compact }: MatchCardProps) {
             {game.effectiveHomeScore}–{game.effectiveAwayScore}
           </span>
           {scoreSuffix}
+          {penaltyScoreLine}
         </>
       ) : (
         <span className="text-xs text-zinc-500 sm:text-sm">vs</span>
       )}
       {game.isSimulated && (
         <p className="text-[10px] text-amber-500/80">simulated</p>
-      )}
-      {pick && isKnockout && game.effectiveHomeScore === game.effectiveAwayScore && (
-        <p className="text-[10px] text-emerald-400">pens</p>
       )}
     </div>
   );
@@ -226,7 +245,7 @@ export function MatchCard({ game, compact }: MatchCardProps) {
           <TeamBadge
             team={homeTeam}
             label={game.homeTeamLabel}
-            isWinner={homeWin || pick === "home"}
+            isWinner={homeWin}
             groupSummary={homeGroupSummary}
           />
           {hasScore && (
@@ -243,11 +262,17 @@ export function MatchCard({ game, compact }: MatchCardProps) {
         {!hasScore && (
           <div className="text-center text-xs text-zinc-500">vs</div>
         )}
+        {hasScore && isKnockout && isDraw && (
+          <p className="text-center text-[10px] text-amber-400/90">a.e.t.</p>
+        )}
+        {penaltyScoreLine && (
+          <div className="text-center sm:hidden">{penaltyScoreLine}</div>
+        )}
         <div className="flex items-start justify-between gap-2">
           <TeamBadge
             team={awayTeam}
             label={game.awayTeamLabel}
-            isWinner={awayWin || pick === "away"}
+            isWinner={awayWin}
             groupSummary={awayGroupSummary}
           />
           {hasScore && (
@@ -272,7 +297,7 @@ export function MatchCard({ game, compact }: MatchCardProps) {
           <TeamBadge
             team={homeTeam}
             label={game.homeTeamLabel}
-            isWinner={homeWin || pick === "home"}
+            isWinner={homeWin}
             groupSummary={homeGroupSummary}
           />
           <ScorersList scorers={homeScorers} align="left" />
@@ -282,7 +307,7 @@ export function MatchCard({ game, compact }: MatchCardProps) {
           <TeamBadge
             team={awayTeam}
             label={game.awayTeamLabel}
-            isWinner={awayWin || pick === "away"}
+            isWinner={awayWin}
             align="end"
             groupSummary={awayGroupSummary}
           />
